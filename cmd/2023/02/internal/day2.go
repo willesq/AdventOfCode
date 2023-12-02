@@ -1,4 +1,4 @@
-package _2
+package internal
 
 import (
 	"adventOfCode2023/internal/adventhelper"

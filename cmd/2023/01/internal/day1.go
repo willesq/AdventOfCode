@@ -1,4 +1,4 @@
-package _1
+package internal
 
 import (
 	"adventOfCode2023/internal/adventhelper"
@@ -115,11 +115,6 @@ func convertToInt(str string) *int {
 		return &num
 	}
 	return &num
-}
-
-func convertToStr(value int) *string {
-	numstring := strconv.Itoa(value)
-	return &numstring
 }
 
 func keys(m map[string]int) []string {
