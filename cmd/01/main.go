@@ -3,39 +3,10 @@ package _1
 import (
 	"adventOfCode2023/internal/adventhelper"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 )
-
-func getCurrentFilePath() (string, error) {
-	// Get the absolute path of the currently executing Go executable
-	exeFilePath, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-
-	// Get the directory containing the executable
-	exeDir := filepath.Dir(exeFilePath)
-
-	// Join the executable directory with the name of the currently running Go file
-	// This assumes that the Go file has the same name as the executable (without the .exe extension on Windows)
-	currentFileName := filepath.Base(exeFilePath)
-	currentFilePath := filepath.Join(exeDir, currentFileName)
-
-	return currentFilePath, nil
-}
-
-func currentDirectory() *string {
-	currentFilePath, err := getCurrentFilePath()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return &currentFilePath
-	}
-	return &currentFilePath
-}
 
 func Part1(filename string) *int {
 	derp := adventhelper.ReadFile(fmt.Sprintf(filename))
@@ -45,6 +16,45 @@ func Part1(filename string) *int {
 func Part2(filename string) *int {
 	derp := adventhelper.ReadFile(fmt.Sprintf(filename))
 	derpUpdated := []string{}
+
+	for _, line := range *derp {
+		updatedLine := *getIntString(line) + *convertStrWordToInt(line)
+		derpUpdated = append(derpUpdated, updatedLine)
+	}
+	return evalintstringslice(derpUpdated)
+}
+
+func evalintstringslice(data []string) *int {
+	intSlice := []int{}
+	for _, line := range data {
+		linenumes := getIntString(line)
+		if *linenumes == "" {
+			linenumes = convertStrWordToInt(line)
+		}
+		lineintstr := *getFirstChar(*linenumes) + *getLastChar(*linenumes)
+		lineInt := convertToInt(lineintstr)
+		intSlice = append(intSlice, *lineInt)
+	}
+	finalSum := 0
+
+	for _, v := range intSlice {
+		finalSum += v
+	}
+	return &finalSum
+}
+
+func getIntString(line string) *string {
+	pattern := `[0-9]+`
+	re := regexp.MustCompile(pattern)
+	LineMatches := re.FindAllString(line, -1)
+	linenumes := ""
+	for _, match := range LineMatches {
+		linenumes += match
+	}
+	return &linenumes
+}
+
+func convertStrWordToInt(str string) *string {
 	replacements := map[string]int{
 		"nine":  9,
 		"eight": 8,
@@ -56,65 +66,30 @@ func Part2(filename string) *int {
 		"two":   2,
 		"one":   1,
 	}
+	var result strings.Builder
+	i := 0
+	for i < len(str) {
+		found := false
 
-	for _, line := range *derp {
-		updatedLine := line
-
-		var result strings.Builder
-		i := 0
-		for i < len(line) {
-			found := false
-
-			// Try to match spelled-out numbers from the current position
-			for _, num := range keys(replacements) {
-				if strings.HasPrefix(line[i:], num) {
-					// Found a match, append the numeric value
-					result.WriteString(fmt.Sprintf("%d", replacements[num]))
-					// Move the position after the matched word
-					i += len(num)
-					found = true
-					break
-				}
-			}
-
-			// If no match is found, append the current character and move to the next
-			if !found {
-				result.WriteByte(line[i])
-				i++
+		// Try to match spelled-out numbers from the current position
+		for _, num := range keys(replacements) {
+			if strings.HasPrefix(str[i:], num) {
+				// Found a match, append the numeric value
+				result.WriteString(fmt.Sprintf("%d", replacements[num]))
+				// Move the position after the matched word
+				i += len(num)
+				found = true
+				break
 			}
 		}
-		updatedLine = result.String()
-		derpUpdated = append(derpUpdated, updatedLine)
-		fmt.Print(line, " -> ", updatedLine, "\n")
-	}
-	return evalintstringslice(derpUpdated)
-}
-
-func evalintstringslice(data []string) *int {
-	pattern := `[0-9]+`
-	re := regexp.MustCompile(pattern)
-	intSlice := []int{}
-
-	for _, line := range data {
-		LineMatches := re.FindAllString(line, -1)
-		if len(LineMatches) == 1 && len(LineMatches[0]) == 2 {
-			intSlice = append(intSlice, *convertToInt(LineMatches[0]))
-			continue
+		// If no match is found, append the current character and move to the next
+		if !found {
+			//result.WriteByte(str[i])
+			i++
 		}
-		linenumes := ""
-		for _, match := range LineMatches {
-			linenumes += match
-		}
-		lineintstr := *getFirstChar(linenumes) + *getLastChar(linenumes)
-		lineInt := convertToInt(lineintstr)
-		intSlice = append(intSlice, *lineInt)
 	}
-	finalSum := 0
-
-	for _, v := range intSlice {
-		finalSum += v
-	}
-	return &finalSum
+	res := result.String()
+	return &res
 }
 
 func getFirstChar(str string) *string {
