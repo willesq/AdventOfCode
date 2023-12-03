@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"adventOfCode2023/internal/adventhelper"
+	"adventOfCode/internal/adventhelper"
 	"fmt"
 	"regexp"
 	"strconv"
