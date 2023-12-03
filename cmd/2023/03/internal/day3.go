@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 func Part1(filename string) (*Challenge, *int) {
@@ -27,14 +28,22 @@ func Part1(filename string) (*Challenge, *int) {
 }
 
 func Part2(input *Challenge) *int {
-	derp := 0
-	return &derp
+	input.GetGears()
+	totalCount := 0
+
+	for _, val := range input.Gears {
+		valRatio := val[0] * val[1]
+		totalCount += valRatio
+	}
+
+	return &totalCount
 }
 
 type Challenge struct {
 	Lines         []Line
 	UniqueSymbols []string
 	PartNumbers   map[string]int
+	Gears         map[string][]int
 }
 
 func (c *Challenge) uniqueSymbols() {
@@ -53,37 +62,82 @@ func (c *Challenge) GetPartNumbers() {
 	}
 	for ridx, row := range c.Lines {
 		// get current line symbols
-		c.evalLines(row, ridx, row.SymbolLocations)
+		c.evalLines(row, ridx, row.SymbolLocations, &c.PartNumbers)
 		if ridx != 0 {
+			// Previous Line
 			prevLineIndex := ridx - 1
-			c.evalLines(c.Lines[prevLineIndex], prevLineIndex, row.SymbolLocations)
+			c.evalLines(c.Lines[prevLineIndex], prevLineIndex, row.SymbolLocations, &c.PartNumbers)
 		}
 		if ridx != len(c.Lines)-1 {
+			// Next line
 			nextLineIndex := ridx + 1
-			c.evalLines(c.Lines[nextLineIndex], nextLineIndex, row.SymbolLocations)
+			c.evalLines(c.Lines[nextLineIndex], nextLineIndex, row.SymbolLocations, &c.PartNumbers)
 		}
 
 	}
 }
 
-func (c *Challenge) evalLines(row Line, rowidx int, symbols map[int]string) {
-	for symkey, _ := range symbols {
+func (c *Challenge) GetGears() {
+	if c.Gears == nil {
+		c.Gears = map[string][]int{}
+	}
+	for ridx, row := range c.Lines {
+		// get current line symbols
+		surroundingNumbers := map[string]int{}
+		c.evalLines(row, ridx, row.SymbolLocations, &surroundingNumbers, true)
+		if ridx != 0 {
+			// Previous Line
+			prevLineIndex := ridx - 1
+			c.evalLines(c.Lines[prevLineIndex], prevLineIndex, row.SymbolLocations, &surroundingNumbers, true)
+		}
+		if ridx != len(c.Lines)-1 {
+			// Next line
+			nextLineIndex := ridx + 1
+			c.evalLines(c.Lines[nextLineIndex], nextLineIndex, row.SymbolLocations, &surroundingNumbers, true)
+		}
+		if len(surroundingNumbers) > 0 {
+			for symKey, symValue := range row.SymbolLocations {
+				numberAroundSym := []int{}
+				if symValue != "*" {
+					continue
+				}
+				for numKey, numVal := range surroundingNumbers {
+					keySplit := strings.Split(numKey, "-")
+					keyValIndex, _ := strconv.Atoi(keySplit[1])
+					keyValString := strconv.Itoa(numVal)
+					for i := 0; i < len(keyValString); i++ {
+						if keyValIndex+i == symKey || keyValIndex+i == symKey-1 {
+							numberAroundSym = append(numberAroundSym, numVal)
+							break
+						}
+					}
+					if keyValIndex == symKey+1 {
+						numberAroundSym = append(numberAroundSym, numVal)
+					}
+				}
+				if len(numberAroundSym) == 2 {
+					key_val := fmt.Sprintf("%d-%d", ridx, symKey)
+					c.Gears[key_val] = numberAroundSym
+				}
+			}
+		}
+	}
+}
+
+func (c *Challenge) evalLines(row Line, rowidx int, symbols map[int]string, inventory *map[string]int, gear ...bool) {
+	for symkey, symValue := range symbols {
 		// iterate over the symbols in the lines
 		for nkey, nvalue := range row.NumberLocations {
 			// check current line
+			if gear != nil && "*" != symValue {
+				continue
+			}
+
 			extractNumber := false
 			nvalueString := strconv.Itoa(nvalue)
 			nvalueStr := len(nvalueString)
-			if nkey+nvalueStr == symkey {
-				// number is to the left of key
-				extractNumber = true
-			}
 			if nkey == symkey+1 {
 				// Number is to the right of key
-				extractNumber = true
-			}
-			if nkey == symkey {
-				// Number shares the same key as sym (used in neighboring lines)
 				extractNumber = true
 			}
 			if !extractNumber {
@@ -96,9 +150,9 @@ func (c *Challenge) evalLines(row Line, rowidx int, symbols map[int]string) {
 			}
 			if extractNumber {
 				key_val := fmt.Sprintf("%d-%d", rowidx, nkey)
-				if _, ok := c.PartNumbers[key_val]; !ok {
+				if _, ok := (*inventory)[key_val]; !ok {
 					// Only add to map if key doesn't exist
-					c.PartNumbers[key_val] = nvalue
+					(*inventory)[key_val] = nvalue
 				}
 			}
 		}
