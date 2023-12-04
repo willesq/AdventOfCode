@@ -26,23 +26,22 @@ func Part2(input *Challenge) *int {
 	cardMap := map[int][]ScratchCard{}
 	for cidx := 0; cidx < len(input.Cards); cidx++ {
 		adjustment := cidx + 1
+		input.Cards[cidx].CardWin = len(input.Cards[cidx].MatchingNumbers)
 		cardMap[adjustment] = append(cardMap[adjustment], input.Cards[cidx])
 	}
+
 	cardPile := 0
 	for mapKey := 1; mapKey <= len(input.Cards); mapKey++ {
 		for _, c := range cardMap[mapKey] {
-			cardWin := len(c.MatchingNumbers)
-			for i := 1; i <= cardWin; i++ {
+			for i := 1; i <= c.CardWin; i++ {
 				addIdx := c.CardNumber + i
-				if addIdx >= len(input.Cards) {
-					continue
-				}
 				cardMap[addIdx] = append(cardMap[addIdx], input.Cards[addIdx-1])
 			}
 		}
 		cardPile += len(cardMap[mapKey])
-		fmt.Printf("Key: %d   \t arrayLen:%d     \t MatchingNums: %d   \t CardPile: %d\n", mapKey, len(cardMap[mapKey]), len(input.Cards[mapKey-1].MatchingNumbers), cardPile)
+		//fmt.Printf("Key: %d   \t arrayLen:%d     \t MatchingNums: %d   \t CardPile: %d\n", mapKey, len(cardMap[mapKey]), len(input.Cards[mapKey-1].MatchingNumbers), cardPile)
 	}
+
 	scratchCardPile := CountCards(&cardMap, 0, 0)
 	return &scratchCardPile
 }
@@ -58,6 +57,7 @@ type ScratchCard struct {
 	CardNumbers     []int
 	MatchingNumbers []int
 	CardScore       int
+	CardWin         int
 }
 
 func (s *ScratchCard) init() {

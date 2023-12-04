@@ -18,3 +18,5 @@ func main() {
 // NOT IT: 4138992 (Needs to be higher)
 // NOT IT: 4139429 (Needs to be higher)
 // NOT IT: 5604889 (Unknown if high or low)
+
+// CORRECT ANSWER: 5659035
