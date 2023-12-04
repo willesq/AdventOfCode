@@ -14,3 +14,7 @@ func main() {
 	sum2 := internal.Part2(input)
 	fmt.Print("2023: Day 04 - Part 2: ", *sum2, "\n")
 }
+
+// NOT IT: 4138992 (Needs to be higher)
+// NOT IT: 4139429 (Needs to be higher)
+// NOT IT: 5604889 (Unknown if high or low)
