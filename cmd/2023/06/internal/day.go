@@ -1,8 +1,8 @@
 package internal
 
-func Part1(filename string) (*Challenge, *int) {
+func Part1() *int {
 	Input := Challenge{}
-	Input.init()
+	Input.initPart1()
 
 	multiplied := 1
 	for _, r := range Input.Races {
@@ -10,27 +10,46 @@ func Part1(filename string) (*Challenge, *int) {
 		multiplied *= r.TotalPossibleWays
 	}
 
-	return &Input, &multiplied
+	return &multiplied
 }
 
-func Part2(Input *Challenge) *int {
-	lowest := -1
-	return &lowest
+func Part2() *int {
+	Input := Challenge{}
+	Input.initPart2()
+
+	multiplied := 1
+	for _, r := range Input.Races {
+		r.getMinMaxMilliseconds()
+		multiplied *= r.TotalPossibleWays
+	}
+
+	return &multiplied
 }
 
 type Challenge struct {
 	Races []Race
 }
 
-func (c *Challenge) init() {
+func (c *Challenge) initPart1() {
 	c.Races = []Race{
+		// Part 1 race numbers
 		{Duration: 44, DistanceRecord: 208},
 		{Duration: 80, DistanceRecord: 1581},
 		{Duration: 65, DistanceRecord: 1050},
 		{Duration: 72, DistanceRecord: 1102},
+		// Part 1 race number examples
 		//{Duration: 7, DistanceRecord: 9},
 		//{Duration: 15, DistanceRecord: 40},
 		//{Duration: 30, DistanceRecord: 200},
+	}
+}
+
+func (c *Challenge) initPart2() {
+	c.Races = []Race{
+		// Part 2 race number
+		{Duration: 44806572, DistanceRecord: 208158110501102},
+		// Part 2 race number example
+		//{Duration: 71530, DistanceRecord: 940200},
 	}
 }
 
