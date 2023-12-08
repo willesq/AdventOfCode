@@ -32,13 +32,43 @@ func Part1(filename string) (*Challenge, *int) {
 		}
 		derpInt++
 	}
-
 	return &Input, &derpInt
 }
 
 func Part2(Input *Challenge) *int {
-	lowest := -1
-	return &lowest
+	startingsNodes := map[string]Key{}
+	// Find All Starting Nodes
+	for idx, key := range Input.Maps {
+		if strings.HasSuffix(key.Value, "A") {
+			startingsNodes[idx] = key
+		}
+	}
+	derpInt := 0
+	iter := 0
+	for {
+		totalEndInZ := 0
+		for evalKey, evalValue := range startingsNodes {
+			if strings.HasSuffix(evalValue.Value, "Z") {
+				totalEndInZ++
+			}
+			leftRight := string(Input.LRInstruction[iter])
+			if leftRight == "L" {
+				startingsNodes[evalKey] = Input.Maps[evalValue.Left]
+			} else if leftRight == "R" {
+				startingsNodes[evalKey] = Input.Maps[evalValue.Right]
+			}
+		}
+		if totalEndInZ == len(startingsNodes) {
+			break
+		}
+		if iter >= len(Input.LRInstruction)-1 {
+			iter = 0
+		} else {
+			iter++
+		}
+		derpInt++
+	}
+	return &derpInt
 }
 
 type Challenge struct {
