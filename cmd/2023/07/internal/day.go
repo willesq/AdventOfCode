@@ -21,38 +21,31 @@ const (
 )
 
 var Cards = map[string]int{
-	"2": 1,
-	"3": 2,
-	"4": 3,
-	"5": 4,
-	"6": 5,
-	"7": 6,
-	"8": 7,
-	"9": 8,
-	"T": 9,
-	"J": 10,
-	"Q": 11,
-	"K": 12,
-	"A": 13,
+	"2": 2,
+	"3": 3,
+	"4": 4,
+	"5": 5,
+	"6": 6,
+	"7": 7,
+	"8": 8,
+	"9": 9,
+	"T": 10,
+	"J": 11,
+	"Q": 12,
+	"K": 13,
+	"A": 14,
 }
-
-//var weight = make(map[string]int)
-//weight := map[string]int{}
 
 func Part1(filename string) (*Challenge, *int) {
 	derp := adventhelper.ReadFile(fmt.Sprintf(filename))
-	Input := Challenge{RawData: derp}
-	Input.init()
+	Input := Challenge{}
+	Input.init(derp)
 	Input.RankCards()
 
-	for key, cm := range Input.Rankings {
-		Input.Rankings[key] = MergeSortHands(cm)
-	}
 	iteration := 1
 	totalWinnings := 0
 	keyRanges := []HandStrength{HighCard, OnePair, TwoPair, ThreeOfKind, FullHouse, FourOfKind, FiveOfKind}
 	for _, kr := range keyRanges {
-		fmt.Printf("Key: %v\n", kr)
 		for _, val := range Input.Rankings[kr] {
 			winning := val.Bid * iteration
 			totalWinnings += winning
@@ -63,18 +56,28 @@ func Part1(filename string) (*Challenge, *int) {
 }
 
 func Part2(Input *Challenge) *int {
-	lowest := -1
-	return &lowest
+	Input.PromoteHands()
+	iteration := 1
+	totalWinnings := 0
+	keyRanges := []HandStrength{HighCard, OnePair, TwoPair, ThreeOfKind, FullHouse, FourOfKind, FiveOfKind}
+	for _, kr := range keyRanges {
+		for _, val := range Input.Rankings[kr] {
+			winning := val.Bid * iteration
+			totalWinnings += winning
+			iteration++
+		}
+	}
+	return &totalWinnings
 }
 
 type Challenge struct {
-	RawData  *[]string
+	//RawData  *[]string
 	Hands    []*Hand
 	Rankings map[HandStrength][]*Hand
 }
 
-func (c *Challenge) init() {
-	for _, line := range *c.RawData {
+func (c *Challenge) init(RawData *[]string) {
+	for _, line := range *RawData {
 		lineSplit := strings.Split(line, " ")
 		bid, _ := strconv.Atoi(lineSplit[1])
 		hand := Hand{Bid: bid}
@@ -95,19 +98,39 @@ func (c *Challenge) RankCards() {
 			c.Rankings[hand.Strength] = []*Hand{hand}
 		}
 	}
+	for key, cm := range c.Rankings {
+		c.Rankings[key] = MergeSortHands(cm)
+	}
+}
+
+func (c *Challenge) PromoteHands() {
+	for _, hand := range c.Hands {
+		hand.Promote()
+	}
+	Cards["J"] = 0
+	c.RankCards()
 }
 
 type Hand struct {
-	Cards    []string
-	Bid      int
-	Strength HandStrength
-	CardMap  map[string]int
+	Cards       []string
+	Bid         int
+	Strength    HandStrength
+	OldStrength HandStrength
+	CardMap     map[string]int
+	Joker       bool
+	JokerCnt    int
 }
 
 func (h *Hand) findStrength() {
 	// make eval map
 	h.CardMap = map[string]int{}
 	for _, card := range h.Cards {
+		if card == "J" {
+			if !h.Joker {
+				h.Joker = true
+			}
+			h.JokerCnt++
+		}
 		if _, exists := h.CardMap[card]; exists {
 			h.CardMap[card]++
 		} else {
@@ -172,6 +195,35 @@ func (h *Hand) findStrength() {
 	}
 }
 
+func (h *Hand) Promote() {
+	if !h.Joker {
+		return
+	}
+	h.OldStrength = h.Strength
+	switch h.Strength {
+	case FiveOfKind:
+		return
+	case FourOfKind:
+		h.Strength = FiveOfKind
+	case ThreeOfKind, FullHouse:
+		if h.JokerCnt == 2 {
+			h.Strength = FiveOfKind
+		} else {
+			h.Strength = FourOfKind
+		}
+	case TwoPair:
+		if h.JokerCnt == 2 {
+			h.Strength = FourOfKind
+		} else if len(h.CardMap) == 3 {
+			h.Strength = FullHouse
+		}
+	case OnePair:
+		h.Strength = ThreeOfKind
+	case HighCard:
+		h.Strength = OnePair
+	}
+}
+
 func MergeSortHands(hands []*Hand) []*Hand {
 	//result := []*Hand{}
 	if len(hands) <= 1 {
@@ -216,6 +268,7 @@ func MergeHands(left, right []*Hand) []*Hand {
 			cardsEqual := 0
 			for i := 0; i < 5; i++ {
 				if lHand.Cards[i] != rHand.Cards[i] {
+					Cards := Cards
 					leftCardWeight := Cards[lHand.Cards[i]]
 					rightCardWeight := Cards[rHand.Cards[i]]
 					if leftCardWeight < rightCardWeight {
