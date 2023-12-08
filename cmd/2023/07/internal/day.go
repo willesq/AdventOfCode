@@ -200,26 +200,25 @@ func (h *Hand) Promote() {
 		return
 	}
 	h.OldStrength = h.Strength
-	switch h.Strength {
-	case FiveOfKind:
-		return
-	case FourOfKind:
+	max_val := 0
+	for _, val := range h.CardMap {
+		if val > max_val {
+			max_val = val
+		}
+	}
+	eval_count := max_val + h.JokerCnt
+	switch eval_count {
+	case 5:
 		h.Strength = FiveOfKind
-	case ThreeOfKind, FullHouse:
-		if h.JokerCnt == 2 {
-			h.Strength = FiveOfKind
-		} else {
-			h.Strength = FourOfKind
-		}
-	case TwoPair:
-		if h.JokerCnt == 2 {
-			h.Strength = FourOfKind
-		} else if len(h.CardMap) == 3 {
+	case 4:
+		h.Strength = FourOfKind
+	case 3:
+		if len(h.CardMap) == 3 {
 			h.Strength = FullHouse
+		} else if len(h.CardMap) == 4 {
+			h.Strength = ThreeOfKind
 		}
-	case OnePair:
-		h.Strength = ThreeOfKind
-	case HighCard:
+	case 2:
 		h.Strength = OnePair
 	}
 }
