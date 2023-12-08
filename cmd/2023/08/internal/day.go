@@ -36,38 +36,54 @@ func Part1(filename string) (*Challenge, *int) {
 }
 
 func Part2(Input *Challenge) *int {
-	startingsNodes := map[string]Key{}
+	sNodes := map[string]Key{}
 	// Find All Starting Nodes
 	for idx, key := range Input.Maps {
 		if strings.HasSuffix(key.Value, "A") {
-			startingsNodes[idx] = key
+			sNodes[idx] = key
 		}
 	}
-	derpInt := 0
-	iter := 0
-	for {
-		totalEndInZ := 0
-		for evalKey, evalValue := range startingsNodes {
-			if strings.HasSuffix(evalValue.Value, "Z") {
-				totalEndInZ++
+	cycles := [][]int{}
+
+	for _, val := range sNodes {
+		cycle := []int{}
+		tmpLFInstructions := Input.LRInstruction
+		step := 0
+		startKey := val.Value
+		firstZ := ""
+		for {
+			evalKey := Input.Maps[startKey]
+			for {
+				if step == 0 || !strings.HasSuffix(evalKey.Value, "Z") {
+					step++
+					leftRight := string(tmpLFInstructions[0])
+					if leftRight == "L" {
+						evalKey = Input.Maps[evalKey.Left]
+					} else if leftRight == "R" {
+						evalKey = Input.Maps[evalKey.Right]
+					}
+					tmpLFInstructions = tmpLFInstructions[1:] + string(tmpLFInstructions[0])
+				} else {
+					break
+				}
 			}
-			leftRight := string(Input.LRInstruction[iter])
-			if leftRight == "L" {
-				startingsNodes[evalKey] = Input.Maps[evalValue.Left]
-			} else if leftRight == "R" {
-				startingsNodes[evalKey] = Input.Maps[evalValue.Right]
+			cycle = append(cycle, step)
+
+			if firstZ == "" {
+				firstZ = evalKey.Value
+				step = 0
+			} else if firstZ == evalKey.Value {
+				break
 			}
 		}
-		if totalEndInZ == len(startingsNodes) {
-			break
-		}
-		if iter >= len(Input.LRInstruction)-1 {
-			iter = 0
-		} else {
-			iter++
-		}
-		derpInt++
+		cycles = append(cycles, cycle)
 	}
+
+	derpInt := cycles[0][0]
+	for _, c := range cycles[1:] {
+		derpInt = (derpInt * c[0]) / GCD(derpInt, c[0])
+	}
+
 	return &derpInt
 }
 
@@ -109,4 +125,13 @@ func (k *Key) init() {
 	k.Left = strSplitRightSplit[0]
 	k.Right = strSplitRightSplit[1]
 
+}
+
+func GCD(a, b int) int {
+	for b != 0 {
+		t := b
+		b = a % b
+		a = t
+	}
+	return a
 }
