@@ -15,15 +15,23 @@ const (
 	East
 )
 
+type LRS int
+
+const (
+	Left LRS = iota
+	Right
+	Straight
+)
+
 func Part1(filename string) (*Challenge, *int) {
 	derp := adventhelper.ReadFile(fmt.Sprintf(filename))
 	Input := Challenge{RawData: derp}
 	Input.init()
 	Input.navigateMap()
-	derpInt := Input.TravelValues[0]
+	derpInt := Input.TravelValues[0].Length
 	for _, num := range Input.TravelValues {
-		if num > derpInt {
-			derpInt = num
+		if num.Length > derpInt {
+			derpInt = num.Length
 		}
 	}
 	if derpInt%2 == 0 {
@@ -36,15 +44,24 @@ func Part1(filename string) (*Challenge, *int) {
 }
 
 func Part2(Input *Challenge) *int {
-	lowest := -1
-	return &lowest
+	Input.TravelValues[0].countLRS()
+	Input.triggerTiles()
+	totalCount := 0
+	for _, row := range Input.Data {
+		for _, tile := range row {
+			if tile.Triggered && !tile.LoopTile {
+				totalCount++
+			}
+		}
+	}
+	return &totalCount
 }
 
 type Challenge struct {
 	RawData      *[]string
 	Data         [][]*Tile
 	SPosition    *Tile
-	TravelValues []int
+	TravelValues []Path
 	ValMap       map[string][]Route
 }
 
@@ -93,7 +110,7 @@ func (c *Challenge) init() {
 
 func (c *Challenge) navigateMap() {
 	var wg, wgResults sync.WaitGroup
-	results := make(chan int)
+	results := make(chan Path)
 	if c.SPosition.North.Value == "|" ||
 		c.SPosition.North.Value == "7" ||
 		c.SPosition.North.Value == "F" {
@@ -101,8 +118,9 @@ func (c *Challenge) navigateMap() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res := c.SPosition.North.findRouteLength(South)
-			results <- res
+			pathTiles, res, foundS, lfs := c.SPosition.North.findRouteLength(South)
+			pathResult := Path{FoundS: foundS, DirectionFromStart: South, Length: res, LeftRightStraight: lfs, PathTiles: append([]*Tile{c.SPosition}, pathTiles...)}
+			results <- pathResult
 		}()
 	}
 	if c.SPosition.West.Value == "-" ||
@@ -112,8 +130,9 @@ func (c *Challenge) navigateMap() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res := c.SPosition.West.findRouteLength(East)
-			results <- res
+			pathTiles, res, foundS, lfs := c.SPosition.West.findRouteLength(East)
+			pathResult := Path{FoundS: foundS, DirectionFromStart: East, Length: res, LeftRightStraight: lfs, PathTiles: append([]*Tile{c.SPosition}, pathTiles...)}
+			results <- pathResult
 		}()
 	}
 	if c.SPosition.South.Value == "|" ||
@@ -123,8 +142,9 @@ func (c *Challenge) navigateMap() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res := c.SPosition.South.findRouteLength(North)
-			results <- res
+			pathTiles, res, foundS, lfs := c.SPosition.South.findRouteLength(North)
+			pathResult := Path{FoundS: foundS, DirectionFromStart: North, Length: res, LeftRightStraight: lfs, PathTiles: append([]*Tile{c.SPosition}, pathTiles...)}
+			results <- pathResult
 		}()
 	}
 	if c.SPosition.East.Value == "-" ||
@@ -134,8 +154,9 @@ func (c *Challenge) navigateMap() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res := c.SPosition.East.findRouteLength(West)
-			results <- res
+			pathTiles, res, foundS, lfs := c.SPosition.East.findRouteLength(West)
+			pathResult := Path{FoundS: foundS, DirectionFromStart: West, Length: res, LeftRightStraight: lfs, PathTiles: append([]*Tile{c.SPosition}, pathTiles...)}
+			results <- pathResult
 		}()
 	}
 	wgResults.Add(1)
@@ -148,16 +169,72 @@ func (c *Challenge) navigateMap() {
 	wg.Wait()
 	close(results)
 	wgResults.Wait()
+
+	for _, loopSlice := range c.TravelValues {
+		for _, loopTile := range loopSlice.PathTiles {
+			loopTile.LoopTile = true
+		}
+	}
+}
+
+func (c *Challenge) triggerTiles() []*Tile {
+	for _, pt := range c.TravelValues[0].PathTiles {
+		current := pt
+
+		for {
+			if current == nil {
+				break
+			}
+			current.Triggered = !current.Triggered
+			current = current.East
+		}
+
+	}
+	return c.TravelValues[0].PathTiles
+}
+
+type Path struct {
+	DirectionFromStart Route
+	FoundS             *bool
+	Length             int
+	LeftRightStraight  []LRS
+	TotalLeft          int
+	TotalRight         int
+	TotalStraight      int
+	LFSMajority        LRS
+	PathTiles          []*Tile
+	InteriorTiles      []*Tile
+}
+
+func (p *Path) countLRS() {
+	for _, val := range p.LeftRightStraight {
+		if val == Left {
+			p.TotalLeft++
+		}
+		if val == Right {
+			p.TotalRight++
+		}
+		if val == Straight {
+			p.TotalStraight++
+		}
+	}
+	if p.TotalLeft > p.TotalRight {
+		p.LFSMajority = Left
+	} else if p.TotalRight > p.TotalLeft {
+		p.LFSMajority = Right
+	}
 }
 
 type Tile struct {
-	North  *Tile
-	South  *Tile
-	East   *Tile
-	West   *Tile
-	Value  string
-	Route1 *Route
-	Route2 *Route
+	North     *Tile
+	South     *Tile
+	East      *Tile
+	West      *Tile
+	Value     string
+	Route1    *Route
+	Route2    *Route
+	LoopTile  bool
+	Triggered bool
 }
 
 func (t *Tile) defineRoute1and2(valMap map[string][]Route) {
@@ -168,9 +245,11 @@ func (t *Tile) defineRoute1and2(valMap map[string][]Route) {
 	t.Route2 = &valMap[t.Value][1]
 }
 
-func (t *Tile) findRouteLength(comingFrom Route, Start ...bool) int {
-	if t.Value == "S" { // return if back at start
-		return 1
+func (t *Tile) findRouteLength(comingFrom Route, Start ...bool) ([]*Tile, int, *bool, []LRS) {
+	lfs := []LRS{}
+	if t.Value == "S" {
+		foundS := true // return if back at start
+		return []*Tile{}, 1, &foundS, lfs
 	}
 	var nextPath Route
 	if *t.Route1 == comingFrom {
@@ -178,15 +257,72 @@ func (t *Tile) findRouteLength(comingFrom Route, Start ...bool) int {
 	} else {
 		nextPath = *t.Route1
 	}
+	var res int
+	var foundS *bool
+	var lfsres []LRS
+	var tRes []*Tile
 	switch nextPath {
 	case North:
-		return t.North.findRouteLength(South) + 1
+		lfs = append(lfs, t.findLeftRightStraight(comingFrom, North))
+		tRes, res, foundS, lfsres = t.North.findRouteLength(South)
 	case South:
-		return t.South.findRouteLength(North) + 1
+		lfs = append(lfs, t.findLeftRightStraight(comingFrom, South))
+		tRes, res, foundS, lfsres = t.South.findRouteLength(North)
 	case East:
-		return t.East.findRouteLength(West) + 1
+		lfs = append(lfs, t.findLeftRightStraight(comingFrom, East))
+		tRes, res, foundS, lfsres = t.East.findRouteLength(West)
 	case West:
-		return t.West.findRouteLength(East) + 1
+		lfs = append(lfs, t.findLeftRightStraight(comingFrom, West))
+		tRes, res, foundS, lfsres = t.West.findRouteLength(East)
 	}
-	return 0
+	return append(tRes, t), res + 1, foundS, append(lfs, lfsres...)
+}
+
+func (t *Tile) findLeftRightStraight(from, to Route) LRS {
+	opPair := map[Route]Route{
+		North: South,
+		South: North,
+		West:  East,
+		East:  West,
+	}
+	if opPair[from] == to {
+		return Straight
+	}
+	var path LRS
+	switch from {
+	case North:
+		switch to {
+		case West:
+			path = Right
+		case East:
+			path = Left
+		}
+	case South:
+		switch to {
+		case West:
+			path = Left
+		case East:
+			path = Right
+		}
+	case East:
+		switch to {
+		case North:
+			path = Right
+		case South:
+			path = Left
+		}
+	case West:
+		switch to {
+		case North:
+			path = Left
+		case South:
+			path = Right
+		}
+	}
+	return path
+}
+
+type Index struct {
+	X int
+	Y int
 }

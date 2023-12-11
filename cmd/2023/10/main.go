@@ -18,3 +18,5 @@ func main() {
 
 	fmt.Printf("Total Time Taken: %v ", time.Since(start))
 }
+
+// 1538 - part 2, not it
